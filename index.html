@@ -1,1 +1,327 @@
-index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Photo</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  padding: 25px;
+  border-radius: 22px;
+  text-align: center;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+}
+
+h1 {
+  margin-top: 0;
+  color: #222;
+}
+
+p {
+  color: #666;
+}
+
+input[type="file"] {
+  width: 100%;
+  padding: 12px;
+  margin: 15px 0;
+  border: 2px dashed #667eea;
+  border-radius: 12px;
+}
+
+button {
+  border: none;
+  padding: 13px 20px;
+  margin: 8px 4px;
+  border-radius: 10px;
+  background: #667eea;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #4f63d2;
+}
+
+#photo {
+  max-width: 100%;
+  max-height: 450px;
+  border-radius: 15px;
+  margin-top: 15px;
+  display: none;
+  object-fit: contain;
+}
+
+#qr {
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+}
+
+#downloadBtn {
+  display: none;
+  background: #16a34a;
+}
+
+#copyBtn {
+  display: none;
+}
+
+#linkBox {
+  display: none;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h1>📷 My Photo</h1>
+
+  <p>Select a photo to display it on this webpage.</p>
+
+  <input
+    type="file"
+    id="fileInput"
+    accept="image/*"
+  >
+
+  <img id="photo" alt="Selected photo">
+
+  <br>
+
+  <button id="downloadBtn">
+    💾 Save Photo Page
+  </button>
+
+  <button id="copyBtn">
+    🔗 Copy Page Link
+  </button>
+
+  <input
+    id="linkBox"
+    readonly
+    placeholder="Your webpage link"
+  >
+
+  <div id="qr"></div>
+
+  <p id="qrText" style="display:none;">
+    Scan this QR code to open the webpage.
+  </p>
+
+</div>
+
+<script>
+const fileInput = document.getElementById("fileInput");
+const photo = document.getElementById("photo");
+const downloadBtn = document.getElementById("downloadBtn");
+const copyBtn = document.getElementById("copyBtn");
+const linkBox = document.getElementById("linkBox");
+const qr = document.getElementById("qr");
+const qrText = document.getElementById("qrText");
+
+let imageData = "";
+
+fileInput.addEventListener("change", function () {
+
+  const file = this.files[0];
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please select an image.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function (event) {
+
+    imageData = event.target.result;
+
+    photo.src = imageData;
+    photo.style.display = "block";
+
+    downloadBtn.style.display = "inline-block";
+
+    createQR();
+
+  };
+
+  reader.readAsDataURL(file);
+});
+
+
+function createQR() {
+
+  /*
+    QR code points to the current webpage URL.
+    It works after this HTML is uploaded to GitHub Pages.
+  */
+
+  const pageURL = window.location.href;
+
+  if (
+    pageURL.startsWith("file://") ||
+    pageURL === "" ||
+    pageURL.includes("localhost")
+  ) {
+
+    qr.innerHTML = `
+      <div style="
+        padding:15px;
+        background:#f3f4f6;
+        border-radius:10px;
+      ">
+        Upload this HTML to GitHub Pages first.<br>
+        Then the QR code will contain your public link.
+      </div>
+    `;
+
+    return;
+  }
+
+  const qrURL =
+    "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
+    + encodeURIComponent(pageURL);
+
+  qr.innerHTML = `
+    <img
+      src="${qrURL}"
+      width="250"
+      height="250"
+      alt="QR Code"
+    >
+  `;
+
+  linkBox.value = pageURL;
+  linkBox.style.display = "block";
+
+  copyBtn.style.display = "inline-block";
+  qrText.style.display = "block";
+}
+
+
+downloadBtn.addEventListener("click", function () {
+
+  if (!imageData) {
+    alert("Please select a photo first.");
+    return;
+  }
+
+  /*
+    Create a new HTML page containing the image
+    directly inside the HTML as Base64 data.
+  */
+
+  const newHTML = `
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>My Photo</title>
+
+<style>
+
+body {
+  margin:0;
+  min-height:100vh;
+  background:#111827;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+
+img {
+  max-width:100%;
+  max-height:95vh;
+  object-fit:contain;
+  border-radius:15px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<img
+src="${imageData}"
+alt="My Photo">
+
+</body>
+
+</html>
+`;
+
+  const blob = new Blob(
+    [newHTML],
+    {type:"text/html"}
+  );
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = "my-photo.html";
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  document.body.removeChild(a);
+
+  URL.revokeObjectURL(url);
+
+});
+
+
+copyBtn.addEventListener("click", function () {
+
+  navigator.clipboard.writeText(linkBox.value);
+
+  alert("Link copied!");
+
+});
+
+</script>
+
+</body>
+</html>
