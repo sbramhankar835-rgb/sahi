@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Photo Link & QR</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #6479df, #7b45a8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 620px;
+  background: white;
+  border-radius: 30px;
+  padding: 30px 24px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+
+h1 {
+  font-size: 40px;
+  margin: 0 0 10px;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin: 20px 0;
+}
+
+.steps span {
+  background: #f0f1f7;
+  padding: 7px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.upload-box {
+  border: 3px dashed #7186df;
+  border-radius: 18px;
+  padding: 20px;
+  background: #fafbff;
+}
+
+input[type="file"] {
+  width: 100%;
+  font-size: 16px;
+}
+
+#preview {
+  display: none;
+  max-width: 100%;
+  max-height: 350px;
+  margin: 20px auto;
+  border-radius: 18px;
+  object-fit: contain;
+}
+
+button {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 15px;
+  margin-top: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  background: #6479df;
+  color: white;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #eeeeee;
+  color: #222;
+}
+
+button:disabled {
+  opacity: .5;
+}
+
+#result {
+  display: none;
+  margin-top: 25px;
+}
+
+.link {
+  background: #f1f2f7;
+  padding: 13px;
+  border-radius: 12px;
+  text-align: left;
+  word-break: break-all;
+  font-size: 13px;
+}
+
+#qrcode {
+  display: inline-block;
+  background: white;
+  padding: 12px;
+  border-radius: 15px;
+  margin-top: 10px;
+}
+
+.status {
+  margin-top: 15px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.success {
+  color: #16804b;
+}
+
+.error {
+  color: #b42318;
+}
+
+.setup {
+  text-align: left;
+  border-top: 1px solid #ddd;
+  margin-top: 25px;
+  padding-top: 20px;
+}
+
+.setup input {
+  width: 100%;
+  padding: 13px;
+  margin-top: 8px;
+  border: 1px solid #bbb;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.small {
+  font-size: 12px;
+  color: #777;
+  line-height: 1.5;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <h1>📷 My Photo</h1>
+
+  <p class="subtitle">
+    Choose a photo → Upload → Get Link → Generate QR → Scan QR
+  </p>
+
+  <div class="steps">
+    <span>1 Choose Photo</span>
+    <span>2 Auto Upload</span>
+    <span>3 QR Code</span>
+    <span>4 Scan & Open</span>
+  </div>
+
+  <!-- PHOTO SELECT -->
+  <div class="upload-box">
+    <input
+      type="file"
+      id="photoInput"
+      accept="image/*">
+  </div>
+
+  <!-- PHOTO PREVIEW -->
+  <img id="preview" alt="Selected photo">
+
+  <div id="status" class="status">
+    Choose a photo to begin.
+  </div>
+
+  <!-- RESULT -->
+  <div id="result">
+
+    <h2>✅ Photo Link Ready</h2>
+
+    <div id="photoLink" class="link"></div>
+
+    <button id="openBtn">
+      🌐 Open Photo
+    </button>
+
+    <button id="copyBtn" class="secondary">
+      📋 Copy Link
+    </button>
+
+    <h2>📱 Scan QR Code</h2>
+
+    <div id="qrcode"></div>
+
+    <button id="downloadBtn" class="secondary">
+      ⬇️ Download QR Code
+    </button>
+
+  </div>
+
+  <!-- ONE TIME SETUP -->
+  <div class="setup">
+
+    <h3>⚙️ One-Time Setup</h3>
+
+    <p>
+      Enter your Cloudinary Cloud Name and Unsigned Upload Preset.
+      You only need to do this once on your device.
+    </p>
+
+    <input
+      id="cloudName"
+      placeholder="Cloud Name">
+
+    <input
+      id="uploadPreset"
+      placeholder="Unsigned Upload Preset">
+
+    <button id="saveSettings" class="secondary">
+      💾 Save Settings
+    </button>
+
+  </div>
+
+  <p class="small">
+    Your photo needs online storage to have a public link.
+    Never put a Cloudinary API secret in this HTML file.
+  </p>
+
+</div>
+
+<!-- QR CODE LIBRARY -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+
+const photoInput = document.getElementById("photoInput");
+const preview = document.getElementById("preview");
+const status = document.getElementById("status");
+
+const result = document.getElementById("result");
+const photoLink = document.getElementById("photoLink");
+
+const openBtn = document.getElementById("openBtn");
+const copyBtn = document.getElementById("copyBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+
+const cloudNameInput =
+document.getElementById("cloudName");
+
+const uploadPresetInput =
+document.getElementById("uploadPreset");
+
+let photoURL = "";
+
+
+/* LOAD SAVED SETTINGS */
+
+cloudNameInput.value =
+localStorage.getItem("cloudName") || "";
+
+uploadPresetInput.value =
+localStorage.getItem("uploadPreset") || "";
+
+
+/* SAVE SETTINGS */
+
+document.getElementById("saveSettings").onclick = function() {
+
+  const cloudName =
+  cloudNameInput.value.trim();
+
+  const uploadPreset =
+  uploadPresetInput.value.trim();
+
+  if (!cloudName || !uploadPreset) {
+
+    status.className = "status error";
+
+    status.textContent =
+    "Please enter both values.";
+
+    return;
+  }
+
+  localStorage.setItem(
+    "cloudName",
+    cloudName
+  );
+
+  localStorage.setItem(
+    "uploadPreset",
+    uploadPreset
+  );
+
+  status.className = "status success";
+
+  status.textContent =
+  "Settings saved! Now choose your photo.";
+
+};
+
+
+/* PHOTO SELECT */
+
+photoInput.addEventListener("change", async function() {
+
+  const file = this.files[0];
+
+  result.style.display = "none";
+
+  if (!file) {
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+
+    status.className = "status error";
+
+    status.textContent =
+    "Please select an image.";
+
+    return;
+  }
+
+
+  /* SHOW PREVIEW */
+
+  preview.src =
+  URL.createObjectURL(file);
+
+  preview.style.display = "block";
+
+
+  /* GET SETTINGS */
+
+  const cloudName =
+  localStorage.getItem("cloudName");
+
+  const uploadPreset =
+  localStorage.getItem("uploadPreset");
+
+
+  if (!cloudName || !uploadPreset) {
+
+    status.className = "status error";
+
+    status.innerHTML =
+    "First enter your Cloudinary settings below, then select the photo again.";
+
+    return;
+  }
+
+
+  /* UPLOAD */
+
+  status.className = "status";
+
+  status.textContent =
+  "⏳ Uploading photo...";
+
+
+  try {
+
+    const formData =
+    new FormData();
+
+    formData.append(
+      "file",
+      file
+    );
+
+    formData.append(
+      "upload_preset",
+      uploadPreset
+    );
+
+
+    const response =
+    await fetch(
+      "https://api.cloudinary.com/v1_1/" +
+      encodeURIComponent(cloudName) +
+      "/image/upload",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+
+
+    const data =
+    await response.json();
+
+
+    if (!response.ok ||
+        !data.secure_url) {
+
+      throw new Error(
+        data.error?.message ||
+        "Upload failed"
+      );
+    }
+
+
+    /* PUBLIC PHOTO LINK */
+
+    photoURL =
+    data.secure_url;
+
+
+    photoLink.textContent =
+    photoURL;
+
+
+    /* OPEN PHOTO */
+
+    openBtn.onclick = function() {
+
+      window.open(
+        photoURL,
+        "_blank"
+      );
+
+    };
+
+
+    /* COPY LINK */
+
+    copyBtn.onclick = async function() {
+
+      try {
+
+        await navigator.clipboard
+        .writeText(photoURL);
+
+        copyBtn.textContent =
+        "✅ Link Copied";
+
+        setTimeout(function() {
+
+          copyBtn.textContent =
+          "📋 Copy Link";
+
+        }, 2000);
+
+      } catch {
+
+        alert(
+          "Copy unavailable. Long-press the link to copy it."
+        );
+
+      }
+
+    };
+
+
+    /* CREATE QR */
+
+    const qr =
+    document.getElementById("qrcode");
+
+    qr.innerHTML = "";
+
+    new QRCode(
+      qr,
+      {
+        text: photoURL,
+        width: 220,
+        height: 220,
+        correctLevel:
+        QRCode.CorrectLevel.M
+      }
+    );
+
+
+    result.style.display =
+    "block";
+
+
+    status.className =
+    "status success";
+
+    status.textContent =
+    "🎉 Done! Your photo link and QR code are ready.";
+
+  }
+
+  catch(error) {
+
+    status.className =
+    "status error";
+
+    status.textContent =
+    "Upload failed: " +
+    error.message;
+
+  }
+
+});
+
+
+/* DOWNLOAD QR */
+
+downloadBtn.onclick = function() {
+
+  const canvas =
+  document.querySelector(
+    "#qrcode canvas"
+  );
+
+  if (!canvas) {
+
+    alert(
+      "QR code is not ready yet."
+    );
+
+    return;
+  }
+
+  const link =
+  document.createElement("a");
+
+  link.download =
+  "my-photo-QR.png";
+
+  link.href =
+  canvas.toDataURL("image/png");
+
+  link.click();
+
+};
+
+</script>
+
+</body>
+</html>
